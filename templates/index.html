@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌾 AI Farmer Assistant</title>
+<style>
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #d9fdd3, #f3ffe2);
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 40px 20px;
+}
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 600px;
+}
+.answer div {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.answer h3 {
+    color: #2e8b57;
+    margin-top: 15px;
+}
+
+.answer ul {
+    padding-left: 20px;
+}
+
+.answer li {
+    margin-bottom: 6px;
+}
+
+
+label { font-weight: bold; margin-top: 15px; display: block; }
+textarea, input, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 10px; border: 1px solid #ccc; font-size: 16px; }
+button { background: #2e8b57; color: white; font-weight: bold; border: none; cursor: pointer; transition: 0.3s; }
+button:hover { background: #267148; }
+#mic-btn { background: #ffa500; margin-top: 10px; }
+#mic-btn:hover { background: #ff8c00; }
+#loc-btn { background: #1e90ff; margin-top: 10px; }
+#loc-btn:hover { background: #187bcd; }
+.answer { background: #f5fff7; border-left: 5px solid #2e8b57; padding: 15px; margin-top: 20px; border-radius: 10px; }
+img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🌾 AI Farmer Assistant</h1>
+
+    <form method="POST" enctype="multipart/form-data" id="ai-form">
+        <label for="question">Ask your question:</label>
+        <textarea id="question" name="question" placeholder="Speak or type your question..." required>{{ question or '' }}</textarea>
+        <button type="button" id="mic-btn">🎤 Speak</button>
+
+        <label for="location">Location (optional):</label>
+        <input type="text" id="location" name="location" placeholder="Village, City, etc.">
+        <button type="button" id="loc-btn">📍 Detect My Location</button>
+
+        <label for="image">Upload crop image (optional):</label>
+        <input type="file" id="image" name="image" accept="image/*">
+
+        <button type="submit">Get Advice</button>
+    </form>
+
+    {% if answer %}
+    <div class="answer">
+        <h3>💬 Answer:</h3>
+        <div>{{ answer | safe }}</div>
+        {% if image %}
+        <h3>📷 Uploaded Image:</h3>
+        <img src="{{ image }}" alt="Uploaded Image">
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const micBtn = document.getElementById("mic-btn");
+    const questionInput = document.getElementById("question");
+    const locBtn = document.getElementById("loc-btn");
+    const locationInput = document.getElementById("location");
+
+    // 🎤 Voice input
+    micBtn.addEventListener("click", () => {
+        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            alert("⚠ Your browser does not support speech recognition.");
+            return;
+        }
+
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = navigator.language || 'en-US'; // Detect browser language
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.start();
+
+        recognition.onresult = function(event) {
+            questionInput.value = event.results[0][0].transcript;
+        };
+
+        recognition.onerror = function(event) {
+            alert("🎙 Voice recognition failed. Please try again.");
+            console.log(event.error);
+        };
+    });
+
+    // 📍 Detect location
+    locBtn.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            alert("⚠ Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
+                const data = await response.json();
+                const city = data.address.city || data.address.town || data.address.village || "";
+                const state = data.address.state || "";
+                const country = data.address.country || "";
+                locationInput.value = `${city}, ${state}, ${country}`;
+            } catch (err) {
+                alert("⚠ Unable to detect location: " + err);
+            }
+        }, () => alert("⚠ Permission denied for location."));
+    });
+});
+</script>
+</body>
+</html>
