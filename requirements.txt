@@ -1,0 +1,5 @@
+Flask
+langdetect
+python-dotenv
+google-generativeai
+indic-transliteration
